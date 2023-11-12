@@ -1,0 +1,256 @@
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Radiator Monitor - Balancing</title>
+  <style>
+    table {
+      width: 100%;
+    }
+
+    th {
+      text-align: left;
+    }
+
+    tr:nth-child(even) {
+      background-color: #dddddd;
+    }
+
+    h1 {
+      margin-bottom: 2px;
+    }
+
+    h1.mean-temperature {
+      width: 100%;
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>RadBal - Balancing</h1>
+  <a href="index.html">Monitoring</a> | 
+  <a href="settings.html">Settings</a>
+  <hr />
+  <div id="app">
+    <div v-if="hasStarted">
+      <div v-if="isCalibrating">
+        <div className="alert alert-info" role="alert">
+          <h4 className="alert-heading">Checking current temperatures, please wait!</h4>
+          <p>Before you turn on your heating, we will wait until sensor reports its current temperature when it's cold.
+          </p>
+          <div className="progress">
+            <div className="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
+              aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" style="width: 100%"></div>
+          </div>
+        </div>
+      </div>
+      <div v-else-if="isDeterminingOrder">
+        <div className="alert alert-info" role="alert">
+          <h4 className="alert-heading">Turn on your heating now!</h4>
+          <p>As your radiators heat up, they will move into the right order.</p>
+          <p>{{ warmRadiatorCount }} of {{ radiatorCount }} have started warming.</p>
+          <div className="progress">
+            <div className="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
+              aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" style="width: 100%"></div>
+          </div>
+        </div>
+      </div>
+      <div v-else-if="isBalancing">
+        <div className="alert alert-info" role="alert">
+          <h4 className="alert-heading">Balance your radiators</h4>
+          <p>Adjust each radiator's lock shields until you get the perfect output from each radiator</p>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Room</th>
+            <th>Mean</th>
+            <th></th>
+            <th>Order</th>
+            <th>dT</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(radiator, index) in sortedRadiators">
+            <td>{{ radiator.number }}</td>
+            <td>{{ radiator.room_name }}</td>
+            <td><span v-if="radiator.is_calibrated">{{ radiator.mean_temperature }}°C</span><span v-else>-</span></td>
+            <td>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="orange" class="bi bi-fire"
+                viewBox="0 0 16 16" v-if="radiator.is_warming">
+                <path
+                  d="M8 16c3.314 0 6-2 6-5.5 0-1.5-.5-4-2.5-6 .25 1.5-1.25 2-1.25 2C11 4 9 .5 6 0c.357 2 .5 4-2 6-1.25 1-2 2.729-2 4.5C2 14 4.686 16 8 16Zm0-1c-1.657 0-3-1-3-2.75 0-.75.25-2 1.25-3C6.125 10 7 10.5 7 10.5c-.375-1.25.5-3.25 2-3.5-.179 1-.25 2 1 3 .625.5 1 1.364 1 2.25C11 14 9.657 15 8 15Z" />
+              </svg>
+            </td>
+            <td><span v-if="radiator.is_warming">{{ radiator.warming_order + 1 }}</span><span v-else>-</span></td>
+            <td><span v-if="radiator.is_warming">{{ radiator.delta_t }}°C</span><span v-else>-</span></td>
+            <td>
+              <span v-if="phase === 3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="blue"
+                  class="bi bi-arrow-up-square-fill" viewBox="0 0 16 16" v-if="radiator.delta_t < 4.5">
+                  <path
+                    d="M2 16a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2zm6.5-4.5V5.707l2.146 2.147a.5.5 0 0 0 .708-.708l-3-3a.5.5 0 0 0-.708 0l-3 3a.5.5 0 1 0 .708.708L7.5 5.707V11.5a.5.5 0 0 0 1 0z" />
+                </svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="red"
+                  class="bi bi-arrow-down-square-fill" viewBox="0 0 16 16" v-else-if="radiator.delta_t > 5.5">
+                  <path
+                    d="M2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2zm6.5 4.5v5.793l2.146-2.147a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 1 1 .708-.708L7.5 10.293V4.5a.5.5 0 0 1 1 0z" />
+                </svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="green"
+                  class="bi bi-check-square-fill" viewBox="0 0 16 16" v-else>
+                  <path
+                    d="M2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2zm10.03 4.97a.75.75 0 0 1 .011 1.05l-3.992 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.75.75 0 0 1 1.08-.022z" />
+                </svg>
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <hr />
+      <button className="btn btn-danger" @click="stopBalancing">Stop Balancing</button>
+    </div>
+    <div v-else>
+      <div class="alert alert-info" role="alert">
+        <h4 class="alert-heading">Get ready to balance your hydronics!</h4>
+        <p>Balancing your radiators happens in two phases</p>
+        <p>
+        <ul>
+          <li>We will determine the order that your radiators heat up in and once your radiators are warm</li>
+          <li>You can then adjust the output of each one to ensure they all have the same amount of heat</li>
+        </ul>
+        </p>
+        <hr />
+        <button class="btn btn-primary" @click="startBalancing">Start Balancing</button>
+      </div>
+    </div>
+  </div>
+  <hr />
+  RadMon v0.1 - &Copy; Tomas McGuinness 2023
+</body>
+<script src="vue.global.prod.min.js"></script>
+<script>
+  const { createApp } = Vue
+
+  createApp({
+    data() {
+      return {
+        radiators: [],
+        phase: 0
+      }
+    },
+    computed: {
+      hasData() {
+        return this.radiators.length > 0;
+      },
+      hasStarted() {
+        return this.phase > 0;
+      },
+      isCalibrating() {
+        return this.phase === 1;
+      },
+      isDeterminingOrder() {
+        return this.phase === 2;
+      },
+      isBalancing() {
+        return this.phase === 3;
+      },
+      sortedRadiators: function () {
+        function compare(a, b) {
+
+          const aPosition = a.is_warming ? a.warming_order : a.number + a.warming_order;
+          const bPosition = b.is_warming ? b.warming_order : b.number + b.warming_order;
+
+          console.log(`${a.number}=${aPosition} - ${b.number}=${bPosition}`);
+
+          if (aPosition < bPosition)
+            return -1;
+          if (aPosition > bPosition)
+            return 1;
+          return 0;
+        }
+
+        const sorted = this.radiators.sort(compare);
+
+        console.log({sorted});
+
+        return sorted;
+      },
+      radiatorCount: function () {
+        return this.radiators.length;
+      },
+      warmRadiatorCount: function () {
+        return this.radiators.filter(f => f.is_warming).length;
+      },
+    },
+    methods: {
+      async fetchRadiators() {
+        fetch('api/v1/radiators', {}).then(r => r.json()).then(rads => {
+          hasData = rads.length > 0;
+          this.radiators = rads.map(r => {
+            r.flow_temperature = r.flow_temperature.toFixed(1);
+            r.return_temperature = r.return_temperature.toFixed(1);
+            r.mean_temperature = r.mean_temperature.toFixed(1);
+            return r;
+          });
+        });
+      },
+      async fetchState() {
+        fetch('api/v1/balancing', {}).then(r => r.json()).then(state => {
+          this.phase = state.phase;
+
+          if (this.phase > 1) {
+            this.fetchRadiators();
+          }
+        });
+      },
+      addOrReplace(arr, newObj) {
+        return [...arr.filter((obj) => obj.number !== newObj.number), { ...newObj }];
+      },
+      async startBalancing() {
+        fetch('api/v1/balancing/start', { method: "POST" }).then(r => {
+          this.fetchRadiators();
+          this.phase = 1;
+        });
+      },
+      async stopBalancing() {
+        fetch('api/v1/balancing/stop', { method: "POST" }).then(r => {
+          this.phase = 0;
+        });
+      }
+    },
+    created() {
+      this.interval = setInterval(() => this.$forceUpdate(), 1000);
+    },
+    mounted() {
+      var self = this;
+      this.socket = new WebSocket('ws://' + location.hostname + '/ws');
+      this.socket.onmessage = (event) => {
+
+        if (event.data === "connect") {
+          return;
+        }
+
+        const update = JSON.parse(event.data);
+
+        if (update.type === "radiator_update") {
+          self.radiators = self.addOrReplace(self.radiators, update);
+        } else if (update.type === "status_update") {
+          self.phase = update.phase;
+        }
+      };
+      this.socket.onopen = (event) => {
+        this.socket.send('connect');
+      };
+      this.fetchRadiators();
+      this.fetchState();
+    },
+  }).mount('#app')
+
+</script>
+
+</html>

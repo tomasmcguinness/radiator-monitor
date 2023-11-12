@@ -1,0 +1,12 @@
+# /Kconfig
+# this is all you need!
+source "Kconfig.zephyr"
+
+menu "Radiator Sensor"
+
+config SENSOR_NUMBER
+	int "The sensor's number"
+	range 0 255
+	default 0
+
+endmenu

@@ -1,0 +1,278 @@
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RadMon - Monitoring</title>
+  <style>
+    table {
+      width: 100%;
+    }
+
+    th {
+      text-align: left;
+    }
+
+    tr:nth-child(even) {
+      background-color: #dddddd;
+    }
+
+    h1 {
+      margin-bottom: 2px;
+    }
+
+    div.mean-temperature {
+      border: 1px solid #888;
+      border-radius: 5px;
+      padding: 5px;
+      margin-left: auto;
+      margin-right: auto;
+      margin-bottom: 5px;
+    }
+
+    div.mean-temperature h1 {
+      width: 100%;
+      text-align: center;
+      margin: 0;
+    }
+
+    .modal {
+      display: block;
+      position: fixed;
+      z-index: 1;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgb(0, 0, 0);
+      background-color: rgba(0, 0, 0, 0.4);
+    }
+
+    .modal-content {
+      background-color: #fefefe;
+      margin: 15% auto;
+      padding: 10px;
+      border: 1px solid #888;
+      width: 90%;
+      height: 90%;
+    }
+
+    .close {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+    }
+
+    .close:hover,
+    .close:focus {
+      color: black;
+      text-decoration: none;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Monitoring</h1>
+  <a href="balancing.html">Balancing</a> | 
+  <a href="settings.html">Settings</a>
+  <hr />
+  <div id="app">
+    <div v-if="hasData">
+      <div class="mean-temperature">
+        <h1><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="blue" class="bi bi-thermometer" viewBox="0 0 16 16">
+          <path d="M8 14a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/>
+          <path d="M8 0a2.5 2.5 0 0 0-2.5 2.5v7.55a3.5 3.5 0 1 0 5 0V2.5A2.5 2.5 0 0 0 8 0zM6.5 2.5a1.5 1.5 0 1 1 3 0v7.987l.167.15a2.5 2.5 0 1 1-3.333 0l.166-.15V2.5z"/>
+        </svg> {{ mean_temperature }}°C</h1>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Room</th>
+            <th>Flow</th>
+            <th>Return</th>
+            <th>Mean</th>
+            <th>Updated</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(r, index) in sortedRadiators" @click="openDetails(r.number, index, $event)"
+            style="cursor: pointer;">
+            <td>{{ r.number }}</td>
+            <td>{{ r.room_name }}</td>
+            <td>{{ r.flow_temperature }}°C</td>
+            <td>{{ r.return_temperature }}°C</td>
+            <td>{{ r.mean_temperature }}°C</td>
+            <td>{{ r.last_seen_formatted }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div v-else>
+      <h4>No data. Turn on some of your sensors!</h4>
+    </div>
+    <div id="myModal" class="modal" v-if="isShowingModel">
+      <div class="modal-content">
+        <span class="close" @click="closeModal">&times;</span>
+        <h1 @click="updateName">{{ selectedRadiator.room_name }}</h1>
+        <hr />
+        <table>
+          <thead>
+            <tr>
+              <th>Flow</th>
+              <th>Mean</th>
+              <th>Return</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>{{ selectedRadiator.flow_temperature }}°C</td>
+              <td>{{ selectedRadiator.mean_temperature }}°C</td>
+              <td>{{ selectedRadiator.return_temperature }}°C</td>
+            </tr>
+          </tbody>
+        </table>
+        <button @click="swapSensors">Swap Flow & Return</button>
+      </div>
+    </div>
+  </div>
+  <hr />
+  RadMon v0.1 - &copy; Tomas McGuinness 2023
+</body>
+<script src="vue.global.prod.min.js"></script>
+<script>
+  const { createApp } = Vue
+
+  createApp({
+    data() {
+      return {
+        radiators: [],
+        isBalancing: false,
+        isShowingModel: false,
+        selectedRadiator: null
+      }
+    },
+    computed: {
+      hasData() {
+        return this.radiators.length > 0;
+      },
+      sortedRadiators: function () {
+        function compare(a, b) {
+          if (a.number < b.number)
+            return -1;
+          if (a.number > b.number)
+            return 1;
+          return 0;
+        }
+
+        return this.radiators.sort(compare).map(r => {
+          r.last_seen_formatted = this.timeSince(r.last_seen);
+          return r;
+        });
+      },
+      mean_temperature: function () {
+        const total = this.radiators.reduce((total, current) => {
+          return total + current.mean_temperature;
+        }, 0);
+
+        if (this.radiators.length > 0 && total > 0) {
+          const mean = total / this.radiators.length;
+          return mean.toFixed(1);
+        } else {
+          return '-';
+        }
+      }
+    },
+    methods: {
+      timeSince(date) {
+        var seconds = date; //Math.floor(new Date() - date);
+
+        var interval = seconds / 3600;
+        if (interval > 1) {
+          return Math.floor(interval) + " hours";
+        }
+
+        interval = seconds / 60;
+        if (interval > 1) {
+          return Math.floor(interval) + " minutes";
+        }
+
+        return Math.floor(seconds) + " seconds";
+      },
+      async openDetails(number, index, event) {
+        this.selectedRadiator = this.sortedRadiators[index];
+        this.isShowingModel = true;
+      },
+      closeModal() {
+        console.log('closeModal');
+        this.isShowingModel = false;
+      },
+      async updateName() {
+        const name = prompt("Enter room name");
+
+        if (name) {
+          fetch(`api/v1/radiators/${this.selectedRadiator.number}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'text/plain'
+            },
+            body: name
+          }).then(r => {
+            this.selectedRadiator.room_name = name;
+          });
+        }
+      },
+      async swapSensors() {
+          fetch(`api/v1/radiators/swap/${this.selectedRadiator.number}`, {
+            method: 'POST',
+            body: name
+          })
+          .then(r => {
+            //this.selectedRadiator.flow_temperature = r.flow_temperature;
+            //this.selectedRadiator.return_temperature = r.return_temperature;
+          });
+      },
+      async fetchRadiators() {
+        fetch('api/v1/radiators', {}).then(r => r.json()).then(rads => {
+          hasData = rads.length > 0;
+          this.radiators = rads.map(r => {
+            r.flow_temperature = r.flow_temperature.toFixed(1);
+            r.return_temperature = r.return_temperature.toFixed(1);
+            r.mean_temperature = r.mean_temperature.toFixed(1);
+            return r;
+          });
+        });
+      },
+      addOrReplace(arr, newObj) {
+        return [...arr.filter((obj) => obj.number !== newObj.number), { ...newObj }];
+      },
+    },
+    created() {
+      //this.interval = setInterval(() => this.$forceUpdate(), 1000);
+    },
+    mounted() {
+      var self = this;
+      this.socket = new WebSocket('ws://' + location.hostname + '/ws');
+      this.socket.onmessage = (event) => {
+
+        if (event.data === "connect") {
+          return;
+        }
+
+        const update = JSON.parse(event.data);
+
+        self.radiators = self.addOrReplace(self.radiators, update);
+      };
+      this.socket.onopen = (event) => {
+        this.socket.send('connect');
+      };
+      this.fetchRadiators();
+    },
+  }).mount('#app')
+
+</script>
+
+</html>

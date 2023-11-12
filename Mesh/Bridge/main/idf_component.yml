@@ -1,0 +1,3 @@
+dependencies:
+  espressif/mdns: "*"
+  qrcode: "^0.1.0"

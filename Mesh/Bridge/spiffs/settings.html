@@ -1,0 +1,48 @@
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Radiator Monitor - Settings</title>
+  <style type="text/css">
+    input,
+    label {
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>RadBal - Settings</h1>
+  <a href="index.html">Monitoring</a> |
+  <a href="balancing.html">Balancing</a>
+  <hr />
+  <h2>MQTT</h2>
+  <form method="POST" action="/api/v1/settings/mqtt">
+    <section>
+
+      <div style="float:left;">
+        <label for="url">URL</label>
+        <input id="url" type="text" value="" name="url" placeholder="mqtt://192.168.1.10" required>
+      </div>
+
+      <div style="float:left;">
+        <label for="username">Username</label>
+        <input id="username" type="text" value="" name="username" required>
+      </div>
+
+      <div style="float:left;">
+        <label for="password">Username</label>
+        <input id="password" type="password" value="" name="password" required>
+      </div>
+
+      <br style="clear:both;" />
+
+      <button type="submit">Update</button>
+    </section>
+  </form>
+  <hr />
+  RadMon v0.1 - &copy; Tomas McGuinness 2023
+</body>
+
+</html>
