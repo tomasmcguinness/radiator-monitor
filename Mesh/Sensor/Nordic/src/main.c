@@ -54,24 +54,6 @@ static void bt_ready(int err)
 
 	dk_leds_init();
 
-	// ****
-	// * This is the standard code that enables provisioning.
-	// * For testing, fix the network and app keys
-	// ***
-	
-	// err = bt_mesh_init(bt_mesh_dk_prov_init(), model_handler_init());
-	// if (err) {
-	// 	printk("Initializing mesh failed (err %d)\n", err);
-	// 	return;
-	// }
-
-	// if (IS_ENABLED(CONFIG_SETTINGS)) {
-	// 	settings_load();
-	// }
-
-	// /* This will be a no-op if settings_load() loaded provisioning info */
-	//bt_mesh_prov_enable(BT_MESH_PROV_ADV | BT_MESH_PROV_GATT);
-
 	static const uint8_t dev_uuid[16] = { 0xdd, 0xdd };
 
 	static const struct bt_mesh_prov prov = {
@@ -114,12 +96,16 @@ static void bt_ready(int err)
 		return;
 	} else {
 		printk("Provisioning completed\n");
+
+		// Add the AppKey
+		//
+		bt_mesh_app_key_add(net_idx, app_idx, app_key);
 	
 		// Bind the AppKey
 		//
 		bt_mesh_cfg_cli_app_key_add(net_idx, addr, net_idx, app_idx, app_key, NULL);
 
-		// Bind the Radiator model to the key
+		// Bind the Radiator model to the node
 		//
 		bt_mesh_cfg_cli_mod_app_bind_vnd(net_idx, addr, addr, app_idx, BT_MESH_RADIATOR_CLI_VENDOR_MODEL_ID, BT_COMP_ID_LF, NULL);
 	}
@@ -205,19 +191,11 @@ void main(void)
 	}
 
 	for(;;) {
-		//bt_mesh_resume();
-		//pm_device_action_run(cons, PM_DEVICE_ACTION_RESUME);
-
 		uint16_t flow_temperature = read(0);
 		uint16_t return_temperature = read(1);
 
 		cmd_send_reading(flow_temperature, return_temperature);
 
-		// TODO Make this sleep configurable somehow.
-		//
 		k_sleep(K_SECONDS(5));
-
-		//bt_mesh_suspend();  
-		//pm_device_action_run(cons, PM_DEVICE_ACTION_SUSPEND);
 	}
 }
