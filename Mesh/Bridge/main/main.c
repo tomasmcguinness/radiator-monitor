@@ -44,8 +44,6 @@
 #include "esp_system.h"
 #include "esp_spiffs.h"
 
-#include <nvs_flash.h>
-
 #include "nvs_flash.h"
 
 #include "esp_vfs.h"
@@ -1730,13 +1728,11 @@ void start_mdns_service()
 
 void app_main(void)
 {
-    esp_err_t err;
-
     ESP_LOGI(TAG, "Initializing...");
 
     board_init();
 
-    err = nvs_flash_init();
+    esp_err_t err = nvs_flash_init();
 
     if (err == ESP_ERR_NVS_NO_FREE_PAGES)
     {
@@ -1755,7 +1751,6 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, NULL));
 
     esp_netif_create_default_wifi_sta();
-
     esp_netif_create_default_wifi_ap();
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
