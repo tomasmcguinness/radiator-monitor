@@ -265,10 +265,10 @@ static esp_ble_mesh_model_t vnd_models[] = {
 
 static esp_ble_mesh_model_t root_models[] = {
     ESP_BLE_MESH_MODEL_CFG_SRV(&config_server),
-};
-
+}; 
 static esp_ble_mesh_elem_t elements[] = {
-    ESP_BLE_MESH_ELEMENT(0, root_models, vnd_models)};
+    ESP_BLE_MESH_ELEMENT(0, root_models, vnd_models)
+};
 
 static esp_ble_mesh_comp_t composition = {
     .cid = CID_ESP,
