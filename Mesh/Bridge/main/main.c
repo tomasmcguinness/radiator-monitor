@@ -349,6 +349,11 @@ static void example_ble_mesh_custom_model_cb(esp_ble_mesh_model_cb_event_t event
     uint8_t *msg = (uint8_t *)param->model_operation.msg;
     uint16_t length = (uint16_t)param->model_operation.length;
 
+    if(length != 5) {
+        ESP_LOGI(TAG, "Payload is not the expected size");
+        return;
+    }
+
     short number = msg[0];
 
     int16_t sensor_one_value;

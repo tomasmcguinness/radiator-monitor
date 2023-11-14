@@ -51,7 +51,7 @@ struct bt_mesh_device_network_info
 };
 
 static esp_ble_mesh_cfg_srv_t config_server = {
-    .relay = ESP_BLE_MESH_RELAY_DISABLED,
+    .relay = ESP_BLE_MESH_RELAY_ENABLED,
     .beacon = ESP_BLE_MESH_BEACON_ENABLED,
     .friend_state = ESP_BLE_MESH_FRIEND_NOT_SUPPORTED,
     .gatt_proxy = ESP_BLE_MESH_GATT_PROXY_NOT_SUPPORTED,
@@ -67,23 +67,16 @@ static esp_ble_mesh_cfg_srv_t config_server = {
 #define ESP_BLE_MESH_VND_MODEL_OP_READING_SET ESP_BLE_MESH_MODEL_OP_3(0x0A, ESP_BLE_MESH_VND_COMPANY_ID)
 #define ESP_BLE_MESH_VND_MODEL_OP_READING_SET_STATUS ESP_BLE_MESH_MODEL_OP_3(0x0B, ESP_BLE_MESH_VND_COMPANY_ID)
 
-static const esp_ble_mesh_client_op_pair_t vnd_op_pair[] = {
-    {ESP_BLE_MESH_VND_MODEL_OP_READING_SET, ESP_BLE_MESH_VND_MODEL_OP_READING_SET_STATUS},
-};
-
-static esp_ble_mesh_client_t vendor_client = {
-    .op_pair_size = ARRAY_SIZE(vnd_op_pair),
-    .op_pair = vnd_op_pair,
-};
-
 static esp_ble_mesh_model_op_t vnd_op[] = {
     {ESP_BLE_MESH_VND_MODEL_OP_READING_SET, 0, 0},
     {ESP_BLE_MESH_VND_MODEL_OP_READING_SET_STATUS, 0, 0},
     ESP_BLE_MESH_MODEL_OP_END,
 };
 
+ESP_BLE_MESH_MODEL_PUB_DEFINE(vnd_pub, 5 + 4, ROLE_NODE);
+
 static esp_ble_mesh_model_t vnd_models[] = {
-    ESP_BLE_MESH_VENDOR_MODEL(ESP_BLE_MESH_VND_COMPANY_ID, ESP_BLE_MESH_VND_MODEL_ID, vnd_op, NULL, &vendor_client),
+    ESP_BLE_MESH_VENDOR_MODEL(ESP_BLE_MESH_VND_COMPANY_ID, ESP_BLE_MESH_VND_MODEL_ID, vnd_op, &vnd_pub, NULL),
 };
 
 static esp_ble_mesh_model_t root_models[] = {
@@ -263,9 +256,33 @@ int bt_mesh_device_auto_enter_network(struct bt_mesh_device_network_info *info)
         }
     }
 
-    BT_INFO("exit bt_mesh_device_auto_enter_network()");
-
     return 0;
+}
+
+static void example_ble_mesh_config_server_cb(esp_ble_mesh_cfg_server_cb_event_t event,
+                                              esp_ble_mesh_cfg_server_cb_param_t *param)
+{
+    if (event == ESP_BLE_MESH_CFG_SERVER_STATE_CHANGE_EVT) {
+        switch (param->ctx.recv_op) {
+        case ESP_BLE_MESH_MODEL_OP_APP_KEY_ADD:
+            ESP_LOGI(TAG, "ESP_BLE_MESH_MODEL_OP_APP_KEY_ADD");
+            ESP_LOGI(TAG, "net_idx 0x%04x, app_idx 0x%04x",
+                param->value.state_change.appkey_add.net_idx,
+                param->value.state_change.appkey_add.app_idx);
+            ESP_LOG_BUFFER_HEX("AppKey", param->value.state_change.appkey_add.app_key, 16);
+            break;
+        case ESP_BLE_MESH_MODEL_OP_MODEL_APP_BIND:
+            ESP_LOGI(TAG, "ESP_BLE_MESH_MODEL_OP_MODEL_APP_BIND");
+            ESP_LOGI(TAG, "elem_addr 0x%04x, app_idx 0x%04x, cid 0x%04x, mod_id 0x%04x",
+                param->value.state_change.mod_app_bind.element_addr,
+                param->value.state_change.mod_app_bind.app_idx,
+                param->value.state_change.mod_app_bind.company_id,
+                param->value.state_change.mod_app_bind.model_id);
+            break;
+        default:
+            break;
+        }
+    }
 }
 
 static void example_ble_mesh_custom_model_cb(esp_ble_mesh_model_cb_event_t event,
@@ -281,6 +298,7 @@ static esp_err_t ble_mesh_init(void)
     esp_err_t err = ESP_OK;
 
     esp_ble_mesh_register_prov_callback(example_ble_mesh_provisioning_cb);
+    esp_ble_mesh_register_config_server_callback(example_ble_mesh_config_server_cb);
     esp_ble_mesh_register_custom_model_callback(example_ble_mesh_custom_model_cb);
 
     ESP_LOGI(TAG, "esp_ble_mesh_register_custom_model_callback");
@@ -319,7 +337,7 @@ static esp_err_t ble_mesh_init(void)
         .net_idx = net_idx,
         .flags = flags,
         .iv_index = iv_index,
-        .unicast_addr = 0x0066,
+        .unicast_addr = 0x0065,
         .dev_key = {
             0x01,
             0x23,
@@ -408,17 +426,14 @@ void app_main(void)
 
     ESP_LOGI(TAG, "BLE mesh init complete");
 
-    esp_ble_mesh_msg_ctx_t ctx = {0};
-    uint32_t opcode;
+    uint32_t opcode = ESP_BLE_MESH_VND_MODEL_OP_READING_SET;
 
-    ctx.net_idx = 0;
-    ctx.app_idx = 0;
-    ctx.addr = 0x0063;
-    ctx.send_ttl = 7;
-    ctx.send_rel = true;
-    opcode = ESP_BLE_MESH_VND_MODEL_OP_READING_SET;
+    vnd_pub.publish_addr = 0x0063;
 
-    err = esp_ble_mesh_client_model_send_msg(vendor_client.model, &ctx, opcode, 8, 0x00, MSG_TIMEOUT, true, ROLE_NODE);
+    uint8_t data[5] ={ 0x66, 0x01, 0x01, 0x01, 0x01};
+
+    err = esp_ble_mesh_model_publish(&vnd_models[0], ESP_BLE_MESH_VND_MODEL_OP_READING_SET, sizeof(data), data, ROLE_NODE);
+
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Failed to send vendor message 0x%06" PRIx32, opcode);
     }
