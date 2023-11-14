@@ -1383,6 +1383,49 @@ void uri_decode(char *dest, const char *src, size_t len)
     ngx_unescape_uri(&dst_ptr, &src_ptr, len, NGX_UNESCAPE_URI);
 }
 
+static esp_err_t settings_mqtt_get_handler(httpd_req_t *req) 
+{
+    size_t value_length;
+
+    int err = nvs_get_str(NVS_HANDLE, "mqtt_url", NULL, &value_length);
+
+    cJSON *root = cJSON_CreateObject();
+
+    if (err == ESP_OK)
+    {
+        char mqtt_url[100];
+        char mqtt_username[32];
+        char mqtt_password[32];
+
+        err = nvs_get_str(NVS_HANDLE, "mqtt_url", mqtt_url, &value_length);
+        mqtt_url[value_length] = '/0';
+
+        err = nvs_get_str(NVS_HANDLE, "mqtt_username", mqtt_username, &value_length);
+        mqtt_username[value_length] = '/0';
+
+        err = nvs_get_str(NVS_HANDLE, "mqtt_password", mqtt_password, &value_length);
+        mqtt_password[value_length] = '/0';
+
+        cJSON_AddStringToObject(root, "url", mqtt_url);
+        cJSON_AddStringToObject(root, "username", mqtt_username);
+        cJSON_AddStringToObject(root, "password", mqtt_password);
+    } 
+    else 
+    {
+        cJSON_AddStringToObject(root, "url", "");
+        cJSON_AddStringToObject(root, "username", "");
+        cJSON_AddStringToObject(root, "password", "");
+    }
+
+    const char *json = cJSON_Print(root);
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_sendstr(req, json);
+    free((void *)json);
+    cJSON_Delete(root);
+
+    return ESP_OK;
+}
+
 static esp_err_t settings_mqtt_post_handler(httpd_req_t *req) 
 {
     char *content = malloc(req->content_len + 1);
@@ -1584,6 +1627,12 @@ static httpd_handle_t start_webserver(void)
         .handler = settings_mqtt_post_handler,
         .user_ctx = server_data};
 
+     httpd_uri_t settings_mqtt_get_uri = {
+        .uri = "/api/v1/settings/mqtt",
+        .method = HTTP_GET,
+        .handler = settings_mqtt_get_handler,
+        .user_ctx = server_data};
+
     const httpd_uri_t root = {
         .uri = "/",
         .method = HTTP_GET,
@@ -1596,6 +1645,7 @@ static httpd_handle_t start_webserver(void)
 
         httpd_register_uri_handler(server, &ws);
         httpd_register_uri_handler(server, &settings_mqtt_post_uri);
+        httpd_register_uri_handler(server, &settings_mqtt_get_uri);
         httpd_register_uri_handler(server, &radiator_swap_post_uri);
         httpd_register_uri_handler(server, &radiator_post_uri);
         httpd_register_uri_handler(server, &radiators_get_uri);
@@ -1869,4 +1919,6 @@ void app_main(void)
     server = start_webserver();
 
     ESP_LOGI(TAG, "Web server started");
+
+    mqtt_app_start();
 }

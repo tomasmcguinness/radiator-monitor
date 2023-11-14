@@ -43,6 +43,14 @@
   </form>
   <hr />
   RadMon v0.1 - &copy; Tomas McGuinness 2023
+
+  <script type="text/javascript">
+    fetch("/api/v1/settings/mqtt").then(r => r.json()).then(r =>{
+      document.getElementById("url").value = r.url;
+      document.getElementById("username").value = r.username;
+      document.getElementById("password").value = r.password;
+    })
+  </script>
 </body>
 
 </html>
