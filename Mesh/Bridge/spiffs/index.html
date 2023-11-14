@@ -43,7 +43,7 @@
       left: 0;
       top: 0;
       width: 100%;
-      height: 100%;
+      height: 200px;
       overflow: auto;
       background-color: rgb(0, 0, 0);
       background-color: rgba(0, 0, 0, 0.4);
@@ -142,7 +142,7 @@
   <hr />
   RadMon v0.1 - &copy; Tomas McGuinness 2023
 </body>
-<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script>
   const { createApp } = Vue
 
@@ -169,6 +169,7 @@
         }
 
         return this.radiators.sort(compare).map(r => {
+          console.log(r.last_seen);
           r.last_seen_formatted = this.timeSince(r.last_seen);
           return r;
         });
@@ -188,19 +189,27 @@
     },
     methods: {
       timeSince(date) {
-        var seconds = Math.floor(new Date() - date);
+        
+        var seconds = Date.now() / 1000;
+        var difference = Math.floor(seconds - date);
 
-        var interval = seconds / 3600;
+        var interval = difference / 3600;
+
         if (interval > 1) {
-          return Math.floor(interval) + " hours";
+          return Math.floor(interval) + " hours ago";
         }
 
-        interval = seconds / 60;
+        interval = difference / 60;
+
         if (interval > 1) {
-          return Math.floor(interval) + " minutes";
+          return Math.floor(interval) + " minutes ago";
         }
 
-        return Math.floor(seconds) + " seconds";
+        if(Math.floor(difference) < 2) {
+          return "Just now"
+        } else {
+          return Math.floor(difference) + " seconds ago";
+        }
       },
       async openDetails(number, index, event) {
         this.selectedRadiator = this.sortedRadiators[index];
@@ -228,14 +237,10 @@
           fetch(`api/v1/radiators/swap/${this.selectedRadiator.number}`, {
             method: 'POST',
             body: name
-          })
-          .then(r => {
-            //this.selectedRadiator.flow_temperature = r.flow_temperature;
-            //this.selectedRadiator.return_temperature = r.return_temperature;
           });
       },
       async fetchRadiators() {
-        fetch('api/v1/radiators', {}).then(r => r.json()).then(rads => {
+        fetch('http://radmon.local/api/v1/radiators', {}).then(r => r.json()).then(rads => {
           hasData = rads.length > 0;
           this.radiators = rads.map(r => {
             r.flow_temperature = r.flow_temperature.toFixed(1);
@@ -262,7 +267,6 @@
         }
 
         const update = JSON.parse(event.data);
-        update.last_seen = 0;
         self.radiators = self.addOrReplace(self.radiators, update);
       };
       this.socket.onopen = (event) => {

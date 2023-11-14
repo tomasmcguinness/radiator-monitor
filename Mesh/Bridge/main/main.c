@@ -856,8 +856,6 @@ static EventGroupHandle_t s_wifi_event_group;
 #define PROV_TRANSPORT_SOFTAP "softap"
 #define QRCODE_BASE_URL "https://espressif.github.io/esp-jumpstart/qrcode.html"
 
-static int s_retry_num = 0;
-
 struct file_server_data
 {
     /* Base path of file storage */
@@ -1739,14 +1737,11 @@ void start_mdns_service()
 
 static void obtain_time(void)
 {
-    ESP_LOGI(TAG, "Starting SNTP");
-
-    //esp_netif_sntp_start();
-    
     ESP_LOGI(TAG, "Initializing and starting SNTP");
 
-    esp_sntp_config_t config = ESP_NETIF_SNTP_DEFAULT_CONFIG("pool.ntp.org");
-    esp_netif_sntp_init(&config);
+    sntp_setoperatingmode(SNTP_OPMODE_POLL);
+    sntp_setservername(0, "pool.ntp.org");
+    sntp_init();
 
     // wait for time to be set
     time_t now = 0;
@@ -1761,7 +1756,11 @@ static void obtain_time(void)
     time(&now);
     localtime_r(&now, &timeinfo);
 
-    esp_netif_sntp_deinit();
+    struct tm *tt = gmtime(&now);
+
+    char strftime_buf[64];
+    strftime(strftime_buf, sizeof(strftime_buf), "%c", tt);
+    ESP_LOGI(TAG, "The current UTC date/time according to ESP32: %s", strftime_buf);
 }
 
 void app_main(void)
