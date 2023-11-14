@@ -95,7 +95,7 @@
             <th>Flow</th>
             <th>Return</th>
             <th>Mean</th>
-            <th>Updated</th>
+            <th>Last Seen</th>
           </tr>
         </thead>
         <tbody>
@@ -188,7 +188,7 @@
     },
     methods: {
       timeSince(date) {
-        var seconds = date; //Math.floor(new Date() - date);
+        var seconds = Math.floor(new Date() - date);
 
         var interval = seconds / 3600;
         if (interval > 1) {
@@ -207,7 +207,6 @@
         this.isShowingModel = true;
       },
       closeModal() {
-        console.log('closeModal');
         this.isShowingModel = false;
       },
       async updateName() {
@@ -251,7 +250,7 @@
       },
     },
     created() {
-      //this.interval = setInterval(() => this.$forceUpdate(), 1000);
+      this.interval = setInterval(() => this.$forceUpdate(), 1000);
     },
     mounted() {
       var self = this;
@@ -263,7 +262,7 @@
         }
 
         const update = JSON.parse(event.data);
-
+        update.last_seen = 0;
         self.radiators = self.addOrReplace(self.radiators, update);
       };
       this.socket.onopen = (event) => {

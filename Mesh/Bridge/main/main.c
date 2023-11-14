@@ -54,7 +54,13 @@
 
 #include "mdns.h"
 
+#include "esp_netif_sntp.h"
+#include "esp_sntp.h"
+
 #define TAG "BRIDGE"
+
+static void obtain_time(void);
+static void initialize_sntp(void);
 
 static httpd_handle_t server = NULL;
 static int ws_socket;
@@ -1731,6 +1737,33 @@ void start_mdns_service()
     mdns_instance_name_set("RadMon Bridge");
 }
 
+static void obtain_time(void)
+{
+    ESP_LOGI(TAG, "Starting SNTP");
+
+    //esp_netif_sntp_start();
+    
+    ESP_LOGI(TAG, "Initializing and starting SNTP");
+
+    esp_sntp_config_t config = ESP_NETIF_SNTP_DEFAULT_CONFIG("pool.ntp.org");
+    esp_netif_sntp_init(&config);
+
+    // wait for time to be set
+    time_t now = 0;
+    struct tm timeinfo = { 0 };
+    int retry = 0;
+    const int retry_count = 15;
+    while (esp_netif_sntp_sync_wait(2000 / portTICK_PERIOD_MS) == ESP_ERR_TIMEOUT && ++retry < retry_count) 
+    {
+        ESP_LOGI(TAG, "Waiting for system time to be set... (%d/%d)", retry, retry_count);
+    }
+
+    time(&now);
+    localtime_r(&now, &timeinfo);
+
+    esp_netif_sntp_deinit();
+}
+
 void app_main(void)
 {
     ESP_LOGI(TAG, "Initializing...");
@@ -1803,6 +1836,10 @@ void app_main(void)
     //
     xEventGroupWaitBits(s_wifi_event_group, WIFI_CONNECTED_EVENT, true, true, portMAX_DELAY);
 
+    // Fetch the current time.
+    //
+    obtain_time();
+
     err = bluetooth_init();
     if (err)
     {
@@ -1826,6 +1863,7 @@ void app_main(void)
 
     ESP_LOGI(TAG, "BLE mesh init complete");
 
+    // Start mDNS, so the .local address will work.
     start_mdns_service();
 
     // Start the web server
