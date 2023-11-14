@@ -107,7 +107,8 @@ static void prov_complete(uint16_t net_idx, uint16_t addr, uint8_t flags, uint32
 static void example_ble_mesh_provisioning_cb(esp_ble_mesh_prov_cb_event_t event,
                                              esp_ble_mesh_prov_cb_param_t *param)
 {
-    switch (event) {
+    switch (event)
+    {
     case ESP_BLE_MESH_PROV_REGISTER_COMP_EVT:
         ESP_LOGI(TAG, "ESP_BLE_MESH_PROV_REGISTER_COMP_EVT, err_code %d", param->prov_register_comp.err_code);
         break;
@@ -116,16 +117,16 @@ static void example_ble_mesh_provisioning_cb(esp_ble_mesh_prov_cb_event_t event,
         break;
     case ESP_BLE_MESH_NODE_PROV_LINK_OPEN_EVT:
         ESP_LOGI(TAG, "ESP_BLE_MESH_NODE_PROV_LINK_OPEN_EVT, bearer %s",
-            param->node_prov_link_open.bearer == ESP_BLE_MESH_PROV_ADV ? "PB-ADV" : "PB-GATT");
+                 param->node_prov_link_open.bearer == ESP_BLE_MESH_PROV_ADV ? "PB-ADV" : "PB-GATT");
         break;
     case ESP_BLE_MESH_NODE_PROV_LINK_CLOSE_EVT:
         ESP_LOGI(TAG, "ESP_BLE_MESH_NODE_PROV_LINK_CLOSE_EVT, bearer %s",
-            param->node_prov_link_close.bearer == ESP_BLE_MESH_PROV_ADV ? "PB-ADV" : "PB-GATT");
+                 param->node_prov_link_close.bearer == ESP_BLE_MESH_PROV_ADV ? "PB-ADV" : "PB-GATT");
         break;
     case ESP_BLE_MESH_NODE_PROV_COMPLETE_EVT:
         ESP_LOGI(TAG, "ESP_BLE_MESH_NODE_PROV_COMPLETE_EVT");
         prov_complete(param->node_prov_complete.net_idx, param->node_prov_complete.addr,
-            param->node_prov_complete.flags, param->node_prov_complete.iv_index);
+                      param->node_prov_complete.flags, param->node_prov_complete.iv_index);
         break;
     case ESP_BLE_MESH_NODE_PROV_RESET_EVT:
         ESP_LOGI(TAG, "ESP_BLE_MESH_NODE_PROV_RESET_EVT");
@@ -262,22 +263,24 @@ int bt_mesh_device_auto_enter_network(struct bt_mesh_device_network_info *info)
 static void example_ble_mesh_config_server_cb(esp_ble_mesh_cfg_server_cb_event_t event,
                                               esp_ble_mesh_cfg_server_cb_param_t *param)
 {
-    if (event == ESP_BLE_MESH_CFG_SERVER_STATE_CHANGE_EVT) {
-        switch (param->ctx.recv_op) {
+    if (event == ESP_BLE_MESH_CFG_SERVER_STATE_CHANGE_EVT)
+    {
+        switch (param->ctx.recv_op)
+        {
         case ESP_BLE_MESH_MODEL_OP_APP_KEY_ADD:
             ESP_LOGI(TAG, "ESP_BLE_MESH_MODEL_OP_APP_KEY_ADD");
             ESP_LOGI(TAG, "net_idx 0x%04x, app_idx 0x%04x",
-                param->value.state_change.appkey_add.net_idx,
-                param->value.state_change.appkey_add.app_idx);
+                     param->value.state_change.appkey_add.net_idx,
+                     param->value.state_change.appkey_add.app_idx);
             ESP_LOG_BUFFER_HEX("AppKey", param->value.state_change.appkey_add.app_key, 16);
             break;
         case ESP_BLE_MESH_MODEL_OP_MODEL_APP_BIND:
             ESP_LOGI(TAG, "ESP_BLE_MESH_MODEL_OP_MODEL_APP_BIND");
             ESP_LOGI(TAG, "elem_addr 0x%04x, app_idx 0x%04x, cid 0x%04x, mod_id 0x%04x",
-                param->value.state_change.mod_app_bind.element_addr,
-                param->value.state_change.mod_app_bind.app_idx,
-                param->value.state_change.mod_app_bind.company_id,
-                param->value.state_change.mod_app_bind.model_id);
+                     param->value.state_change.mod_app_bind.element_addr,
+                     param->value.state_change.mod_app_bind.app_idx,
+                     param->value.state_change.mod_app_bind.company_id,
+                     param->value.state_change.mod_app_bind.model_id);
             break;
         default:
             break;
@@ -288,7 +291,6 @@ static void example_ble_mesh_config_server_cb(esp_ble_mesh_cfg_server_cb_event_t
 static void example_ble_mesh_custom_model_cb(esp_ble_mesh_model_cb_event_t event,
                                              esp_ble_mesh_model_cb_param_t *param)
 {
-
 }
 
 static esp_err_t ble_mesh_init(void)
@@ -384,9 +386,9 @@ static esp_err_t ble_mesh_init(void)
     return err;
 }
 
-#define MSG_SEND_TTL        3
-#define MSG_TIMEOUT         0
-#define MSG_ROLE            ROLE_PROVISIONER
+#define MSG_SEND_TTL 3
+#define MSG_TIMEOUT 0
+#define MSG_ROLE ROLE_PROVISIONER
 
 void app_main(void)
 {
@@ -430,11 +432,17 @@ void app_main(void)
 
     vnd_pub.publish_addr = 0x0063;
 
-    uint8_t data[5] ={ 0x66, 0x01, 0x01, 0x01, 0x01};
+    uint8_t data[5] = {0x66, 0x01, 0x01, 0x01, 0x01};
 
-    err = esp_ble_mesh_model_publish(&vnd_models[0], ESP_BLE_MESH_VND_MODEL_OP_READING_SET, sizeof(data), data, ROLE_NODE);
+    while (1)
+    {
+        err = esp_ble_mesh_model_publish(&vnd_models[0], ESP_BLE_MESH_VND_MODEL_OP_READING_SET, sizeof(data), data, ROLE_NODE);
 
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to send vendor message 0x%06" PRIx32, opcode);
+        if (err != ESP_OK)
+        {
+            ESP_LOGE(TAG, "Failed to send vendor message 0x%06" PRIx32, opcode);
+        }
+
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
     }
 }
