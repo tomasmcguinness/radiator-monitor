@@ -68,7 +68,8 @@ int bt_mesh_radiator_cli_reading_set(struct bt_mesh_radiator_cli *radiator, uint
 
 	// Target the Bridge node (number 99)
 	radiator->model->pub->addr = 0x0063;
-
+    radiator->model->pub->ttl = 3;
+		
     int err = bt_mesh_model_publish(radiator->model);
 
     if(err) {

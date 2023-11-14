@@ -205,19 +205,12 @@ void main(void)
 	}
 
 	for(;;) {
-		//bt_mesh_resume();
-		//pm_device_action_run(cons, PM_DEVICE_ACTION_RESUME);
-
+		
 		uint16_t flow_temperature = read(0);
 		uint16_t return_temperature = read(1);
 
 		cmd_send_reading(flow_temperature, return_temperature);
 
-		// TODO Make this sleep configurable somehow.
-		//
 		k_sleep(K_SECONDS(5));
-
-		//bt_mesh_suspend();  
-		//pm_device_action_run(cons, PM_DEVICE_ACTION_SUSPEND);
 	}
 }
