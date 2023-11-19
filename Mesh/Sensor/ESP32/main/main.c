@@ -386,10 +386,6 @@ static esp_err_t ble_mesh_init(void)
     return err;
 }
 
-#define MSG_SEND_TTL 3
-#define MSG_TIMEOUT 0
-#define MSG_ROLE ROLE_PROVISIONER
-
 void app_main(void)
 {
     esp_err_t err;
