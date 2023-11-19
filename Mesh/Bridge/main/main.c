@@ -1920,5 +1920,8 @@ void app_main(void)
 
     ESP_LOGI(TAG, "Web server started");
 
+    // Start MQTT connection
     mqtt_app_start();
+
+    ESP_LOGI(TAG, "MQTT connection started");
 }
