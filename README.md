@@ -4,11 +4,13 @@ Not much to see right now as I've just published this!
 
 To compile it, you'll need to use ESP-IDF for the Bridge project and Nordic nRF Connect for the sensor
 
-It's designed for use on an ESP32-C3 and Nordic nRF52840. I've been using the Seeed XIAO boards.
-
 Both of these are available as add-ons to VSCode and that's how I've been building, compiling and flashing.
 
+I've been running the bridge on an ESP32-C3 and the sensors on Nordic nRF52840. I've been using the Seed XIAO versions of this MCU.
+
 You'll need a J-Link piece of hardware to flash the Nordic boards at this time.
+
+If you're interested in getting a printed circuit board for the radiator sensors, please let me know.
 
 For an overview, please watch my YouTube video - https://youtu.be/YUV8U6BC5oQ
 
